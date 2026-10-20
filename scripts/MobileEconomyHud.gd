@@ -117,10 +117,24 @@ func apply(screen_frame: Rect2, regions_design: Dictionary, canvas_scale: float,
 	_stamp(_level, level_r, str(data.get("level_label", "")), level_px, COL_LEVEL,
 		HORIZONTAL_ALIGNMENT_CENTER, VERTICAL_ALIGNMENT_CENTER)
 
-	# No XP fill bar — reading text alone sits in the bay.
-	_xp_clip.visible = false
-	_bar_track.visible = false
-	_bar_fill.visible = false
+	# P1: XP fill re-enabled — clipped cyan bar sits in the XP bay, label stamped above.
+	# (Was hard-disabled; regions/xp_pct were already plumbed through apply().)
+	var xp_inset: float = maxf(2.0, minf(xp_r.size.x, xp_r.size.y) * 0.12)
+	var xp_bar := Rect2(
+		xp_r.position + Vector2(xp_inset, xp_inset),
+		Vector2(maxf(1.0, xp_r.size.x - xp_inset * 2.0), maxf(1.0, xp_r.size.y - xp_inset * 2.0))
+	)
+	_xp_clip.visible = xp_r.size.x > 4.0 and xp_r.size.y > 4.0
+	_bar_track.visible = _xp_clip.visible
+	var xp_pct: float = clampf(float(data.get("xp_pct", 0.0)), 0.0, 1.0)
+	_bar_fill.visible = _xp_clip.visible and xp_pct > 0.0
+	if _xp_clip.visible:
+		_xp_clip.position = xp_bar.position
+		_xp_clip.size = xp_bar.size
+		_bar_track.position = Vector2.ZERO
+		_bar_track.size = xp_bar.size
+		_bar_fill.position = Vector2.ZERO
+		_bar_fill.size = Vector2(xp_bar.size.x * xp_pct, xp_bar.size.y)
 
 	_stamp(_xp_lab, xp_r, str(data.get("xp_label", "")), xp_px, Color(0.96, 0.97, 0.95),
 		HORIZONTAL_ALIGNMENT_CENTER, VERTICAL_ALIGNMENT_CENTER)
