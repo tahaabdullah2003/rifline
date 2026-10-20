@@ -1,5 +1,10 @@
 # RIFTLINE — Agent handoff pack (≤15 MB diagnostic slice)
 
+> **STATUS (agent pass 1, 2026-10-20):** All P0 items fixed, P1.6/P1.7/P1.8 done,
+> P2.11/P2.12/P2.13 done. Full change log → `docs/FIXES_APPLIED.md`;
+> remaining art/audio work → `docs/ASSET_AND_POLISH_TODO.md`.
+> All `.gd` files pass `gdparse`. Needs a full-repo run to confirm visually.
+
 **Full repo:** `mts755Dev/RiftLine` (Godot 4.7.2, package `com.riftline.lasttrain`)  
 **This zip:** code + downsized HUD PNGs + fonts + screenshot — enough to diagnose and patch logic. **Not** a runnable full game (bulk art / audio / animations stripped).
 
