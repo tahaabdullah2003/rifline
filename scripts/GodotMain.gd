@@ -9394,6 +9394,22 @@ func image_button(x: float, y: float, w: float, h: float, key: String, method: S
 		hx = x - (hw - w) * 0.5
 		hy = y - (hh - h) * 0.5
 	ui_buttons.append({ "x": hx, "y": hy, "w": hw, "h": hh, "method": method, "args": args, "label": "" })
+
+## P1: shared 1×/2× speed toggle for HUD spots (mobile parity with desktop).
+## Uses desktop btn_hud_speed art when present; otherwise a brass text pill
+## (stripped/preview packs ship without assets/ui/final/btn_hud_speed.png).
+func _draw_speed_toggle(x: float, y: float, s: float) -> void:
+	var active := game_speed > 1.0
+	if images.has("btn_hud_speed"):
+		image_button(x, y, s, s, "btn_hud_speed", "toggle_speed")
+		if active:
+			draw_rect(Rect2(x, y, s, s), Color(0.25, 0.9, 1.0, 0.35), true)
+			draw_text2("2×", x + s * 0.5, y + s * 0.62, int(maxf(14.0, s * 0.36)), Color.WHITE, "center")
+	else:
+		button(x, y, s, s, "2×" if active else "1×", "toggle_speed", [],
+			int(maxf(14.0, s * 0.36)),
+			Color.html("#5ee9ff") if active else Color(.5, .9, 1, .34))
+
 func bar(x: float, y: float, w: float, h: float, pct: float, fill: Color, label = "") -> void:
 	draw_rect(Rect2(x, y, w, h), Color(0, 0, 0, .42), true)
 	draw_rect(Rect2(x + 2, y + 2, max(0.0, (w - 4) * clamp(pct, 0, 1)), h - 4), fill, true)
@@ -11614,7 +11630,8 @@ func draw_hud() -> void:
 	# Skip entirely while armory sheet is open (scrap lives in the sheet header).
 	if USE_PRODUCTION_UI and shop_slide < 0.2 and images.has("hud_resources_status"):
 		if is_mobile_ui and _mobile_economy_hud != null:
-			# Control-tree MobileEconomyHud owns scrap/LV/XP. Single pause asset beside it (no speed).
+			# Control-tree MobileEconomyHud owns scrap/LV/XP; pause + 1×/2× speed stack
+			# in the reserved right strip beside it (P1: speed was desktop-only).
 			var elay: Dictionary = _mobile_economy_layout()
 			var etr: Rect2 = elay["texture_rect"]
 			var pause_s: float = float(elay.get("pause_s", 40.0))
@@ -11625,6 +11642,8 @@ func draw_hud() -> void:
 			if paused:
 				draw_rect(Rect2(bx0, by0, pause_s, pause_s), Color(1.0, 0.8, 0.2, 0.28), true)
 				draw_text2("▶", bx0 + pause_s * 0.5, by0 + pause_s * 0.62, 17, Color.WHITE, "center")
+			var spd_y: float = minf(by0 + pause_s + 8.0, etr.position.y + etr.size.y - pause_s)
+			_draw_speed_toggle(bx0, spd_y, pause_s)
 			if save_flash > 0:
 				draw_text2("AUTOSAVED", etr.position.x + etr.size.x * 0.5, etr.position.y + etr.size.y + 4.0, 12, Color.html("#7dffbb"), "center")
 
@@ -11728,14 +11747,10 @@ func draw_hud() -> void:
 		var pause_s: float = 52.0 if is_mobile_ui else 42.0
 		var pause_key3 := "btn_mobile_pause" if (is_mobile_ui and images.has("btn_mobile_pause")) else "btn_hud_pause"
 		image_button(pause_x, pause_y, pause_s, pause_s, pause_key3, "toggle_pause")
-		if not is_mobile_ui:
-			image_button(pause_x + pause_s + 10.0, pause_y, pause_s, pause_s, "btn_hud_speed", "toggle_speed")
+		_draw_speed_toggle(pause_x + pause_s + 10.0, pause_y, pause_s)
 		if paused:
 			draw_rect(Rect2(pause_x, pause_y, pause_s, pause_s), Color(1, 0.8, 0.2, 0.35), true)
 			draw_text2("▶", pause_x + pause_s * 0.5, pause_y + pause_s * 0.62, 19, Color.WHITE, "center")
-		if not is_mobile_ui and game_speed > 1.0:
-			draw_rect(Rect2(pause_x + pause_s + 10.0, pause_y, pause_s, pause_s), Color(0.25, 0.9, 1.0, 0.35), true)
-			draw_text2("2×", pause_x + pause_s + 10.0 + pause_s * 0.5, pause_y + pause_s * 0.62, 17, Color.WHITE, "center")
 
 	if state == "combat":
 		# Armory sheet owns the right half — park combat consoles while it's open.
