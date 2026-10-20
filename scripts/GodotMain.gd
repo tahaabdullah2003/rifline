@@ -608,8 +608,10 @@ func _ready() -> void:
 				rs.close()
 
 func sfx(sound_name: String) -> void:
-	if audio != null and settings.get("particles", true):
-		audio.play(sound_name)
+	# P0 fix: SFX follows the SFX volume setting (0 = muted) — never the particles toggle.
+	if audio == null or float(settings.get("sfx_volume", 10)) <= 0.0:
+		return
+	audio.play(sound_name)
 
 func load_assets() -> void:
 	var paths = {
@@ -677,7 +679,6 @@ func load_assets() -> void:
 		"boss_mycelarch_slam": "res://assets/animations/boss_mycelarch_stomp_sheet.png",
 		"boss_mycelarch_beam": "res://assets/animations/boss_mycelarch_beam_sheet.png",
 		"boss_mycelarch_death": "res://assets/animations/boss_mycelarch_death_sheet.png",
-		"boss_mycelarch": "res://assets/boss_flow_refs/boss_mycelarch_idle.jpeg",
 		"icon_engine": "res://assets/icon_engine.png",
 		"icon_gatling": "res://assets/icon_gatling.png",
 		"icon_cannon": "res://assets/icon_cannon.png",
@@ -10801,12 +10802,16 @@ func draw_iron_colossus(b: Dictionary) -> void:
 		anim = "idle"
 	var sheet = boss_anim_sheet_key(anim, bid)
 	if not images.has(sheet) or not SPRITE_ANIMS.has(sheet):
-		var fallback = "boss_mycelarch" if is_mycelarch else ("boss_breach_idle" if bid == "breach_engine" else "boss_colossus")
-		if images.has(fallback):
-			var ftex: Texture2D = images[fallback]
-			var fh = BOSS_MYCELARCH_DRAW_H if is_mycelarch else (BOSS_BREACH_DRAW_H if bid == "breach_engine" else BOSS_DRAW_H)
-			var fw = fh * float(ftex.get_width()) / max(1.0, float(ftex.get_height()))
-			draw_texture_rect(ftex, Rect2(bx - fw * 0.48, by - fh + 14.0, fw, fh), false, Color(1, 1, 1, 1))
+		# P0 fix: dead boss_flow_refs/ JPEG fallback removed.
+		# Mycelarch has no static art — skip drawing rather than show the wrong boss.
+		# Iron Colossus / Breach Engine keep their static full-body fallbacks.
+		if not is_mycelarch:
+			var fallback = "boss_breach_idle" if bid == "breach_engine" else "boss_colossus"
+			if images.has(fallback):
+				var ftex: Texture2D = images[fallback]
+				var fh = BOSS_BREACH_DRAW_H if bid == "breach_engine" else BOSS_DRAW_H
+				var fw = fh * float(ftex.get_width()) / max(1.0, float(ftex.get_height()))
+				draw_texture_rect(ftex, Rect2(bx - fw * 0.48, by - fh + 14.0, fw, fh), false, Color(1, 1, 1, 1))
 		return
 
 	var meta = SPRITE_ANIMS[sheet]
