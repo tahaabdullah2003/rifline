@@ -860,7 +860,7 @@ static func weapons_panel(
 
 
 ## Four-slot Active Abilities console (Downloads SVG embed → PNG).
-## Source: riftline_reactor_status_panel.svg — 2048×682 (filename mismatch; art is 4-slot bar).
+## Source: riftline_reactor_status_panel.svg — 2048×682 (runtime PNG renamed to riftline_abilities_bar.png).
 ## Brass/cyan frame; transparent icon openings + opaque label wells beneath.
 const ABILITIES_TEX_W := 2048.0
 const ABILITIES_TEX_H := 682.0

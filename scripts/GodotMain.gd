@@ -757,8 +757,8 @@ func load_assets() -> void:
 		# Four-slot weapon priority console (Downloads SVG → PNG).
 		"hud_compact_weapons": "res://assets/ui/hud/riftline_four_slot_hud_bar.png",
 		"hud_gen_abilities": "res://art/ui/mobile_generated/hud_gen_abilities.png",
-		# Four-slot abilities bar (riftline_reactor_status_panel.svg — 4 compartments).
-		"hud_compact_abilities": "res://assets/ui/hud/riftline_reactor_status_panel.png",
+		# Four-slot abilities bar (renamed from riftline_reactor_status_panel.png — art is a 4-slot bar).
+		"hud_compact_abilities": "res://assets/ui/hud/riftline_abilities_bar.png",
 		"hud_gen_shop_tab": "res://art/ui/mobile_generated/hud_gen_shop_tab.png",
 		"hud_shop_tab_vertical": "res://assets/ui/hud/riftline_vertical_hud_frame.png"
 	}
@@ -8554,8 +8554,8 @@ func _run_mobile_abilities_capture_suite() -> void:
 	var report := FileAccess.open("res://dev_captures/mobile_preview/15_abilities_report.txt", FileAccess.WRITE)
 	if report:
 		report.store_string("mission=07_abilities_reactor_status_panel\n")
-		report.store_string("asset=res://assets/ui/hud/riftline_reactor_status_panel.png\n")
-		report.store_string("svg_source=riftline_reactor_status_panel.svg\n")
+		report.store_string("asset=res://assets/ui/hud/riftline_abilities_bar.png\n")
+		report.store_string("svg_source=riftline_reactor_status_panel.svg (renamed runtime PNG)\n")
 		report.store_string("tex_px=%.0fx%.0f aspect=%.4f\n" % [
 			MobileHudLayout.ABILITIES_TEX_W, MobileHudLayout.ABILITIES_TEX_H, MobileHudLayout.ABILITIES_ASPECT
 		])
