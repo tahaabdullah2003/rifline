@@ -742,24 +742,14 @@ func load_assets() -> void:
 		"route_choice_card_frame": "res://assets/ui/final/route_choice_card_frame.png",
 		"explosion_car": "res://assets/fx/explosion_car_sheet.png",
 		"explosion_beam": "res://assets/fx/explosion_beam_sheet.png",
-		# Mobile-generated HUD shells (Downloads batch) — used only when is_mobile_ui.
-		"hud_gen_player_status": "res://art/ui/mobile_generated/hud_gen_player_status.png",
 		# Empty-interior dual-section status shell (Downloads SVG → PNG).
 		"hud_compact_player_status": "res://assets/ui/hud/riftline_dual_section_hud_panel_empty_interior.png",
-		"hud_gen_mission_banner": "res://art/ui/mobile_generated/hud_gen_mission_banner.png",
-		"hud_gen_economy": "res://art/ui/mobile_generated/hud_gen_economy.png",
-		"hud_gen_banner_alt_a": "res://art/ui/mobile_generated/hud_gen_banner_alt_a.png",
-		"hud_gen_banner_alt_b": "res://art/ui/mobile_generated/hud_gen_banner_alt_b.png",
-		"hud_gen_reactor": "res://art/ui/mobile_generated/hud_gen_reactor.png",
 		# Compact reactor console (Downloads SVG → PNG) — cyan cylinder + 4-row brass panel.
 		"hud_compact_reactor": "res://assets/ui/hud/riftline_compact_hud_bar.png",
-		"hud_gen_weapons": "res://art/ui/mobile_generated/hud_gen_weapons.png",
 		# Four-slot weapon priority console (Downloads SVG → PNG).
 		"hud_compact_weapons": "res://assets/ui/hud/riftline_four_slot_hud_bar.png",
-		"hud_gen_abilities": "res://art/ui/mobile_generated/hud_gen_abilities.png",
 		# Four-slot abilities bar (renamed from riftline_reactor_status_panel.png — art is a 4-slot bar).
 		"hud_compact_abilities": "res://assets/ui/hud/riftline_abilities_bar.png",
-		"hud_gen_shop_tab": "res://art/ui/mobile_generated/hud_gen_shop_tab.png",
 		"hud_shop_tab_vertical": "res://assets/ui/hud/riftline_vertical_hud_frame.png"
 	}
 	# Mobile UI (Android + F5 mobile preview) shares the same compact packs so preview == device.
@@ -796,15 +786,7 @@ func load_assets() -> void:
 		elif use_mobile_assets:
 			push_warning("[Riftline] Missing Android asset key=%s path=%s" % [str(key), path_str])
 
-## Mobile HUD: prefer generated frame shells; desktop keeps original keys untouched.
-func _hud_frame_key(desktop_key: String, gen_key: String) -> String:
-	if is_mobile_ui and images.has(gen_key):
-		return gen_key
-	return desktop_key
-
-func _mobile_gen_hud_active() -> bool:
-	return is_mobile_ui and images.has("hud_gen_player_status")
-
+## Mobile HUD: production compact shells only (dead hud_gen_* architecture removed).
 func _mobile_compact_reactor_active() -> bool:
 	return is_mobile_ui and images.has("hud_compact_reactor")
 
@@ -954,10 +936,6 @@ func _mobile_encounter_layout() -> Dictionary:
 	if _mobile_economy_hud != null:
 		var eco: Dictionary = _mobile_economy_layout()
 		scrap_tex = eco.get("texture_rect", Rect2())
-	elif _mobile_gen_hud_active():
-		var ml: Dictionary = _mobile_hud_layout()
-		scrap_tex = Rect2(float(ml.get("right_x", 0.0)), float(ml.get("top_y", 0.0)),
-			float(ml.get("right_w", 0.0)), float(ml.get("right_h", 0.0)))
 	return MobileHudLayout.encounter_panel(
 		safe_inset, design_view_left, design_view_right, design_view_top,
 		(design_view_right - design_view_left) / maxf(1.0, design_view_bottom - design_view_top),
@@ -1079,13 +1057,6 @@ func _mobile_player_status_layout() -> Dictionary:
 	)
 	_mobile_status_panel = lay["texture_rect"]
 	_mobile_status_conflict = ""
-	# Report (do not relocate) overlap with the existing top-center mission panel.
-	if _mobile_gen_hud_active() and state == "combat":
-		var ml: Dictionary = _mobile_hud_layout()
-		var center := Rect2(float(ml["center_x"]), float(ml["top_y"]), float(ml["center_w"]), float(ml["center_h"]))
-		if MobileHudLayout.overlaps(_mobile_status_panel, center):
-			_mobile_status_conflict = "STATUS_OVERLAPS_MISSION_BANNER status=%s mission=%s" % [str(_mobile_status_panel), str(center)]
-			push_warning("[Riftline] " + _mobile_status_conflict)
 	return lay
 
 ## Shared geometry for the polished mobile generated HUD (design-space, 1920×1080).
@@ -2242,7 +2213,6 @@ func _process(delta: float) -> void:
 					str(permanent.get("alloy", 0)), str(permanent.get("victories", 0)), str(permanent.get("best_score", 0))
 				])
 				f.store_string("hitbox_verify=%s\n" % verify)
-				f.store_string("gen_hud=%s\n" % str(images.has("hud_gen_player_status")))
 				f.close()
 			if want_hud:
 				# Fresh combat setup (avoid leftover title overlay / verify side-effects).
@@ -11471,7 +11441,6 @@ func draw_hud() -> void:
 		return
 
 	# --- PRODUCTION UI ---
-	var mlayout: Dictionary = _mobile_hud_layout() if _mobile_gen_hud_active() else {}
 	# TOP LEFT (Locomotive Status HUD — Steam Locomotive HUD Panel)
 	# Park while armory sheet is open so the left peek is world-only.
 	var show_status := shop_slide < 0.2
@@ -11492,13 +11461,8 @@ func draw_hud() -> void:
 		pw = tr.size.x
 		ph = tr.size.y
 	elif show_status:
-		status_frame = _hud_frame_key("hud_locomotive_status", "hud_gen_player_status")
-		if _mobile_gen_hud_active() and status_frame == "hud_gen_player_status":
-			px = float(mlayout["left_x"])
-			py = float(mlayout["top_y"])
-			pw = float(mlayout["left_w"])
-			ph = float(mlayout["left_h"])
-		elif is_mobile_ui:
+		status_frame = "hud_locomotive_status"
+		if is_mobile_ui:
 			pw = minf(520.0, (DESIGN_W - float(safe_inset.get("left", 0.0)) - float(safe_inset.get("right", 0.0))) * 0.30)
 			ph = pw * (724.0 / 2172.0)
 		draw_tex(status_frame, Rect2(px, py, pw, ph))
@@ -11513,14 +11477,6 @@ func draw_hud() -> void:
 			if _mobile_status_hud == null:
 				# Fallback custom-draw path if Control HUD failed to load.
 				_draw_mobile_dual_status_layered(status_lay, hp_pct, hp_col, hp_label)
-		elif is_mobile_ui and status_frame == "hud_gen_player_status":
-			# Legacy generated shell cavities: top = HP, lower-left = SPD, lower-right = HEAT.
-			bar(px + pw * 0.155, py + ph * 0.32, pw * 0.69, maxf(15.0, ph * 0.168), hp_pct, hp_col, hp_label)
-			var sp_pct_m = clamp(momentum["speed"] / 150.0, 0.0, 1.0)
-			bar(px + pw * 0.155, py + ph * 0.62, pw * 0.295, maxf(13.0, ph * 0.148), sp_pct_m, Color.html("#ffce72"), "%d SPD" % int(momentum["speed"]))
-			var ht_pct_m = clamp(heat["value"] / 100.0, 0.0, 1.0)
-			var ht_col_m = Color.html("#ff4438") if heat["value"] > 80.0 else (Color.html("#ffaa3b") if heat["value"] > 50.0 else Color.html("#8ef7ff"))
-			bar(px + pw * 0.55, py + ph * 0.62, pw * 0.295, maxf(13.0, ph * 0.148), ht_pct_m, ht_col_m, "%d HEAT" % int(heat["value"]))
 		else:
 			bar(px + 104.0, py + 50.0, 319.0, 25.0, hp_pct, hp_col, hp_label)
 			# Speed bar in lower-left cutout (x=[386..1010], y=[516..604])
@@ -11539,38 +11495,32 @@ func draw_hud() -> void:
 		var panel_h = 188.0
 		var panel_x = (DESIGN_W - panel_w) * 0.5
 		var panel_y = 10.0 + (float(safe_inset.get("top", 0.0)) if is_mobile_ui else 0.0)
-		var use_gen_banner := _mobile_gen_hud_active() and images.has("hud_gen_mission_banner")
-		if use_gen_banner:
-			panel_x = float(mlayout["center_x"])
-			panel_y = float(mlayout["top_y"])
-			panel_w = float(mlayout["center_w"])
-			panel_h = float(mlayout["center_h"])
-		elif is_mobile_ui:
+		if is_mobile_ui:
 			panel_w = minf(720.0, (DESIGN_W - float(safe_inset.get("left", 0.0)) - float(safe_inset.get("right", 0.0))) * 0.38)
 			panel_h = panel_w * (724.0 / 2172.0)
 			panel_x = (DESIGN_W - panel_w) * 0.5
 		var panel_cx = panel_x + panel_w * 0.5
 
-		# 0. Decorative Panel Frame (mobile uses generated mission banner; desktop unchanged)
-		draw_tex(_hud_frame_key("ui_panel_wide_cyan", "hud_gen_mission_banner"), Rect2(panel_x, panel_y, panel_w, panel_h))
+		# 0. Decorative Panel Frame (shared production frame)
+		draw_tex("ui_panel_wide_cyan", Rect2(panel_x, panel_y, panel_w, panel_h))
 
 		# 1. TOP: Encounter Name — proportions relative to frame when using generated banner
 		var title_default = "FUNGUS WILDS NODE" if current_region == "fungus_wilds" else "RUSTLANDS NODE"
 		var title_text = "REGION TRANSITION" if region_transition_active else ("BOSS ENCOUNTER" if boss_active else current_encounter.get("title", title_default))
-		var title_size = 17 if use_gen_banner else 18
+		var title_size = 18
 		if title_text.length() > 20:
-			title_size = 14.5 if use_gen_banner else 15.5
+			title_size = 15.5
 		if title_text.length() > 28:
-			title_size = 12.5 if use_gen_banner else 13.5
-		var title_y: float = panel_y + (panel_h * 0.28 if use_gen_banner else 66.0)
+			title_size = 13.5
+		var title_y: float = panel_y + 66.0
 		draw_text2(title_text, panel_cx + 1.0, title_y + 1.0, title_size, Color(0.0, 0.0, 0.0, 0.85), "center")
 		draw_text2(title_text, panel_cx, title_y, title_size, Color.WHITE, "center")
 
 		# 2. BELOW TITLE: Encounter Progress Bar & Label
-		var bar_w = panel_w * 0.68 if use_gen_banner else 440.0
+		var bar_w = 440.0
 		var bar_x = panel_x + (panel_w - bar_w) * 0.5
-		var bar_y = panel_y + (panel_h * 0.42 if use_gen_banner else 74.0)
-		var bar_h = maxf(11.0, panel_h * 0.085) if use_gen_banner else 16.0
+		var bar_y = panel_y + 74.0
+		var bar_h = 16.0
 		var p_pct = 0.0
 		var bar_col = Color.html("#3de1ff")
 		var bar_label = ""
@@ -11602,18 +11552,18 @@ func draw_hud() -> void:
 			draw_rect(Rect2(bar_x + 2.0, bar_y + 2.0, fill_w, bar_h - 4.0), bar_col, true)
 		draw_rect(Rect2(bar_x, bar_y, bar_w, bar_h), Color(1.0, 1.0, 1.0, 0.22), false, 1.0)
 		var label_y = bar_y + bar_h * 0.72
-		draw_text2(bar_label, panel_cx + 1.0, label_y + 1.0, 11 if use_gen_banner else 12, Color(0.0, 0.0, 0.0, 0.92), "center")
-		draw_text2(bar_label, panel_cx, label_y, 11 if use_gen_banner else 12, Color.WHITE, "center")
+		draw_text2(bar_label, panel_cx + 1.0, label_y + 1.0, 12, Color(0.0, 0.0, 0.0, 0.92), "center")
+		draw_text2(bar_label, panel_cx, label_y, 12, Color.WHITE, "center")
 
 		# 3, 4, 5. MIDDLE ROW: Objective (Left), Route Dots (Center), Track Number (Right)
-		var mid_y = panel_y + (panel_h * 0.64 if use_gen_banner else 110.0)
+		var mid_y = panel_y + 110.0
 
 		# Middle Left: Current Objective
 		var region_obj = "BREACH THE RIFT SCAR" if current_region == RiftScar.REGION_ID else ("SURVIVE FUNGUS WILDS" if current_region == "fungus_wilds" else "SURVIVE THE RUSTLANDS")
 		var obj_title = "CROSSING BIOMES" if region_transition_active else ("FINAL OBJECTIVE" if boss_active else region_obj)
 		var obj_col = Color.html("#ffd36d" if boss_active else ("#7dffbb" if region_transition_active else "#85f2ff"))
 		var obj_x = bar_x + 4.0
-		var mid_fs: float = 11.5 if use_gen_banner else 12.5
+		var mid_fs: float = 12.5
 		draw_text2(obj_title, obj_x + 1.0, mid_y + 1.0, mid_fs, Color(0.0, 0.0, 0.0, 0.8), "left")
 		draw_text2(obj_title, obj_x, mid_y, mid_fs, obj_col, "left")
 
@@ -11622,7 +11572,7 @@ func draw_hud() -> void:
 		for i in range(6):
 			var dot_cx = panel_cx - 40.0 + i * 16.0
 			var dot_col = Color.html("#7dffbb") if i < encounter_index else (Color.html("#ffd36d") if i == encounter_index else Color(1.0, 1.0, 1.0, 0.2))
-			draw_circle(Vector2(dot_cx, dot_cy), 4.0 if use_gen_banner else 4.5, dot_col)
+			draw_circle(Vector2(dot_cx, dot_cy), 4.5, dot_col)
 			if i == encounter_index:
 				draw_arc(Vector2(dot_cx, dot_cy), 6.0, 0.0, TAU, 16, Color(1.0, 0.83, 0.43, 0.45), 1.0)
 
@@ -11633,15 +11583,15 @@ func draw_hud() -> void:
 		draw_text2(track_text, track_x, mid_y, mid_fs, Color.html("#b7ecff"), "right")
 
 		# 6. BOTTOM: Run Time & Score (Aligned within safe area above lower metal border)
-		var bot_y = panel_y + (panel_h * 0.80 if use_gen_banner else 130.0)
+		var bot_y = panel_y + 130.0
 		var bot_text = "RUN %s   •   SCORE %d" % [fmt_time(run_time), calculate_run_score(false)]
 		draw_text2(bot_text, panel_cx + 1.0, bot_y + 1.0, mid_fs, Color(0.0, 0.0, 0.0, 0.85), "center")
 		draw_text2(bot_text, panel_cx, bot_y, mid_fs, Color.html("#8ee5ff"), "center")
 
 
-	# TOP RIGHT (Resource & XP HUD — hud_resources_status / mobile generated economy)
+	# TOP RIGHT (Resource & XP HUD — hud_resources_status)
 	# Skip entirely while armory sheet is open (scrap lives in the sheet header).
-	if USE_PRODUCTION_UI and shop_slide < 0.2 and (images.has("hud_resources_status") or (is_mobile_ui and images.has("hud_gen_economy"))):
+	if USE_PRODUCTION_UI and shop_slide < 0.2 and images.has("hud_resources_status"):
 		if is_mobile_ui and _mobile_economy_hud != null:
 			# Control-tree MobileEconomyHud owns scrap/LV/XP. Single pause asset beside it (no speed).
 			var elay: Dictionary = _mobile_economy_layout()
@@ -11656,39 +11606,7 @@ func draw_hud() -> void:
 				draw_text2("▶", bx0 + pause_s * 0.5, by0 + pause_s * 0.62, 17, Color.WHITE, "center")
 			if save_flash > 0:
 				draw_text2("AUTOSAVED", etr.position.x + etr.size.x * 0.5, etr.position.y + etr.size.y + 4.0, 12, Color.html("#7dffbb"), "center")
-		elif _mobile_gen_hud_active() and images.has("hud_gen_economy"):
-			# Legacy generated economy shell (fallback if Control HUD unavailable).
-			var eco_w: float = float(mlayout["right_w"])
-			var eco_h: float = float(mlayout["right_h"])
-			var rx: float = float(mlayout["right_x"])
-			var ry: float = float(mlayout["top_y"])
-			draw_tex("hud_gen_economy", Rect2(rx, ry, eco_w, eco_h))
-			var s_icon := "icon_scrap_gear" if images.has("icon_scrap_gear") else "icon_scrap"
-			var icon_sz: float = eco_h * 0.32
-			var c1_cx := rx + eco_w * 0.12
-			var c1_cy := ry + eco_h * 0.52
-			draw_tex(s_icon, Rect2(c1_cx - icon_sz * 0.5, c1_cy - icon_sz * 0.5, icon_sz, icon_sz))
-			draw_text2("%d" % int(scrap), rx + eco_w * 0.40, ry + eco_h * 0.56, 18, Color.html("#ffd27b"), "center")
-			draw_text2("LV %d" % int(level), rx + eco_w * 0.675, ry + eco_h * 0.56, 12, Color.html("#8ef7ff"), "center")
-			var r4_x := rx + eco_w * 0.78
-			var r4_y := ry + eco_h * 0.38
-			var r4_w := eco_w * 0.155
-			var r4_h := eco_h * 0.28
-			draw_rect(Rect2(r4_x, r4_y, r4_w, r4_h), Color(0.03, 0.12, 0.16, 0.75), true)
-			var xp_pct_m := clampf(float(xp) / maxf(1.0, float(xp_needed)), 0.0, 1.0)
-			if xp_pct_m > 0.0:
-				draw_rect(Rect2(r4_x, r4_y, r4_w * xp_pct_m, r4_h), Color.html("#5ee9ff"), true)
-			draw_text2("%d/%d" % [int(xp), int(xp_needed)], r4_x + r4_w * 0.5, r4_y + r4_h * 0.70, 10, Color.WHITE, "center")
-			var pause_s2: float = float(mlayout["pause_s"])
-			var bx0b: float = rx + eco_w + 10.0
-			var by0b: float = ry + 4.0
-			var pause_key2 := "btn_mobile_pause" if images.has("btn_mobile_pause") else "btn_hud_pause"
-			image_button(bx0b, by0b, pause_s2, pause_s2, pause_key2, "toggle_pause")
-			if paused:
-				draw_rect(Rect2(bx0b, by0b, pause_s2, pause_s2), Color(1.0, 0.8, 0.2, 0.28), true)
-				draw_text2("▶", bx0b + pause_s2 * 0.5, by0b + pause_s2 * 0.62, 17, Color.WHITE, "center")
-			if save_flash > 0:
-				draw_text2("AUTOSAVED", rx + eco_w * 0.5, ry + eco_h + 12.0, 12, Color.html("#7dffbb"), "center")
+
 		else:
 			var scale = 0.26
 			var rx = 1335.0
@@ -11894,10 +11812,6 @@ func adjust_shop_scroll(delta_y: float) -> void:
 func _shop_tab_w() -> float:
 	if is_mobile_ui and images.has("hud_shop_tab_vertical"):
 		return float(_mobile_shop_tab_layout()["texture_rect"].size.x)
-	if _mobile_gen_hud_active() and images.has("hud_gen_shop_tab"):
-		return float(_mobile_hud_layout()["shop_w"])
-	if is_mobile_ui and images.has("hud_gen_shop_tab"):
-		return 56.0
 	return SHOP_TAB_W
 
 func _shop_drawer_w() -> float:
@@ -12292,25 +12206,7 @@ func draw_live_shop() -> void:
 				ly = (cell_top + cell_bot) * 0.5 + (ascent - descent) * 0.5
 			draw_text2(letters[i], cx, ly, fs, letter_col, "center")
 		button(hit_r.position.x, hit_r.position.y, hit_r.size.x, hit_r.size.y, "", "toggle_live_shop", [], 1, Color(1, 1, 1, 0))
-	elif _mobile_gen_hud_active() and images.has("hud_gen_shop_tab"):
-		var mls := _mobile_hud_layout()
-		tab_h = float(mls["shop_h"])
-		tab_y = float(mls["shop_y"])
-		draw_tex("hud_gen_shop_tab", Rect2(tab_x, tab_y, tab_w, tab_h))
-		draw_text2("S", tab_x + tab_w * 0.52, tab_y + tab_h * 0.28, 15, Color.html("#ffd27b"), "center")
-		draw_text2("H", tab_x + tab_w * 0.52, tab_y + tab_h * 0.42, 15, Color.html("#ffd27b"), "center")
-		draw_text2("O", tab_x + tab_w * 0.52, tab_y + tab_h * 0.56, 15, Color.html("#ffd27b"), "center")
-		draw_text2("P", tab_x + tab_w * 0.52, tab_y + tab_h * 0.70, 15, Color.html("#ffd27b"), "center")
-		button(tab_x, tab_y, tab_w, tab_h, "", "toggle_live_shop", [], 1, Color(1, 1, 1, 0))
-	elif is_mobile_ui and images.has("hud_gen_shop_tab"):
-		# Legacy gen tab — only if the Mission 04 vertical frame is missing.
-		tab_h = 190.0
-		draw_tex("hud_gen_shop_tab", Rect2(tab_x, tab_y, tab_w, tab_h))
-		draw_text2("S", tab_x + tab_w * 0.52, tab_y + 48.0, 16, Color.html("#ffd27b"), "center")
-		draw_text2("H", tab_x + tab_w * 0.52, tab_y + 70.0, 16, Color.html("#ffd27b"), "center")
-		draw_text2("O", tab_x + tab_w * 0.52, tab_y + 92.0, 16, Color.html("#ffd27b"), "center")
-		draw_text2("P", tab_x + tab_w * 0.52, tab_y + 114.0, 16, Color.html("#ffd27b"), "center")
-		button(tab_x, tab_y, tab_w, tab_h, "", "toggle_live_shop", [], 1, Color(1, 1, 1, 0))
+
 	else:
 		var tab_fill := Color(0.08, 0.12, 0.16, 0.96) if shop_open or shop_slide > 0.05 else Color(0.07, 0.11, 0.15, 0.94)
 		var tab_stroke := Color.html("#c9a24a") if shop_open else Color(0.5, 0.9, 1.0, 0.45)
@@ -12731,20 +12627,13 @@ func draw_power_panel() -> void:
 		_draw_mobile_compact_reactor()
 		return
 
-	# Desktop / legacy mobile generated shell.
+	# Desktop / fallback mobile shell (dead generated-shell path removed).
 	var px: float = 20.0 + (float(safe_inset["left"]) if is_mobile_ui else 0.0)
 	var py: float = 745.0 - (float(safe_inset["bottom"]) if is_mobile_ui else 0.0)
 	var pw: float = 520.0 if is_mobile_ui else 480.0
 	var ph: float = 320.0
-	var reactor_frame := _hud_frame_key("hud_reactor_power", "hud_gen_reactor")
-	var use_gen_reactor := _mobile_gen_hud_active() and reactor_frame == "hud_gen_reactor"
-	if use_gen_reactor:
-		var ml := _mobile_hud_layout()
-		px = float(ml["reactor_x"])
-		py = float(ml["reactor_y"])
-		pw = float(ml["reactor_w"])
-		ph = float(ml["reactor_h"])
-	var scale: float = pw / (1448.0 if reactor_frame == "hud_gen_reactor" else 1536.0)
+	var reactor_frame := "hud_reactor_power"
+	var scale: float = pw / 1536.0
 	var used := reactor_used_power()
 	var rmax := maxi(1, int(reactor["max"]))
 	if is_mobile_ui and reactor_panel_collapsed:
@@ -12753,59 +12642,6 @@ func draw_power_panel() -> void:
 		button(px + pw - 150.0, py + ph - 48.0, 130.0, 40.0, "EXPAND", "toggle_reactor_panel", [], 16, Color.html("#5ee9ff"))
 		return
 	draw_tex(reactor_frame, Rect2(px, py, pw, ph))
-	if use_gen_reactor:
-		draw_text2("REACTOR  %d/%d" % [used, rmax], px + pw * 0.38, py + ph * 0.105, 11, Color.html("#7fe9ff"), "left")
-		var gbar_x: float = px + pw * 0.60
-		var gbar_y: float = py + ph * 0.075
-		var gbar_w: float = pw * 0.16
-		var gbar_h: float = 9.0
-		draw_rect(Rect2(gbar_x, gbar_y, gbar_w, gbar_h), Color(0.04, 0.06, 0.08, 0.92), true)
-		draw_rect(Rect2(gbar_x, gbar_y, gbar_w * clampf(float(used) / float(rmax), 0.0, 1.0), gbar_h), Color(0.25, 0.85, 0.95, 0.9), true)
-		if pages > 1:
-			button(px + pw * 0.38, py + ph * 0.145, 28.0, 22.0, "<", "shift_weapon_hud_page", [-1], 12, Color.html("#8ef7ff"))
-			button(px + pw * 0.47, py + ph * 0.145, 28.0, 22.0, ">", "shift_weapon_hud_page", [1], 12, Color.html("#8ef7ff"))
-		button(px + pw - 66.0, py + 8.0, 58.0, 24.0, "HIDE", "toggle_reactor_panel", [], 11, Color.html("#c9a24a"))
-		var n_rows: int = mini(7, rows.size())
-		var y0: float = py + ph * 0.30
-		var y1: float = py + ph * 0.88
-		var step: float = (y1 - y0) / maxf(1.0, float(maxi(1, n_rows - 1)))
-		var content_x0: float = px + pw * 0.355
-		var content_x1: float = px + pw * 0.945
-		var content_w: float = content_x1 - content_x0
-		for i in range(n_rows):
-			var key2 := str(rows[i][0])
-			var label_str := str(rows[i][1])
-			var current_p := int(rows[i][2])
-			var max_p := int(rows[i][3])
-			var active := key2 != ""
-			var yy: float = y0 + step * float(i)
-			var lx0: float = content_x0
-			var lw: float = content_w * 0.30
-			var lh: float = 13.0
-			draw_rect(Rect2(lx0, yy - lh * 0.5, lw, lh), Color(0.04, 0.05, 0.07, 0.92), true)
-			draw_rect(Rect2(lx0, yy - lh * 0.5, lw, lh), Color(0.72, 0.55, 0.28, 0.85 if active else 0.35), false, 1.0)
-			draw_text2(label_str, lx0 + lw * 0.5, yy + 3.0, 9, Color.html("#e8f6ff") if active else Color(0.55, 0.62, 0.68, 0.55), "center")
-			var pip0: float = content_x0 + content_w * 0.34
-			var pip_step_m: float = content_w * 0.068
-			for n in range(mini(5, maxi(1, max_p if max_p > 0 else 3))):
-				var sx: float = pip0 + pip_step_m * float(n)
-				if n < current_p and active:
-					draw_circle(Vector2(sx, yy), 4.0, Color.html("#ffd06f"))
-				else:
-					draw_circle(Vector2(sx, yy), 3.6, Color(0.02, 0.04, 0.06, 0.85))
-					draw_arc(Vector2(sx, yy), 3.6, 0.0, TAU, 12, Color(0.35, 0.55, 0.62, 0.45 if active else 0.2), 1.0)
-			if active:
-				var bs: float = 20.0
-				var minus_bx: float = content_x1 - bs * 2.35
-				var plus_bx: float = content_x1 - bs * 0.85
-				for pair2 in [[minus_bx, -1, "−"], [plus_bx, 1, "+"]]:
-					var bx: float = float(pair2[0])
-					var delta2 := int(pair2[1])
-					draw_rect(Rect2(bx - bs * 0.5, yy - bs * 0.5, bs, bs), Color(0.12, 0.14, 0.16, 0.95), true)
-					draw_rect(Rect2(bx - bs * 0.5, yy - bs * 0.5, bs, bs), Color(0.72, 0.55, 0.28, 0.9), false, 1.2)
-					draw_text2(str(pair2[2]), bx, yy + 4.0, 12, Color.html("#6ef0ff"), "center")
-					button(bx - bs * 0.5, yy - bs * 0.5, bs, bs, "", "adjust_power", [key2, delta2], 1, Color(1, 1, 1, 0))
-		return
 
 	draw_text2("REACTOR  %d/%d" % [used, rmax], px + 175.0, py + 26.0, 12 if is_mobile_ui else 11, Color.html("#7fe9ff"), "left")
 	var bar_x: float = px + 290.0
@@ -13091,30 +12927,13 @@ func draw_module_panel() -> void:
 	var py: float = 880.0
 	var pw: float = 650.0
 	var ph: float = 187.0
-	var weapons_frame := _hud_frame_key("hud_module_targeting", "hud_gen_weapons")
-	var use_gen_weapons := _mobile_gen_hud_active() and weapons_frame == "hud_gen_weapons"
-	if use_gen_weapons:
-		var mlw := _mobile_hud_layout()
-		px = float(mlw["weap_x"])
-		py = float(mlw["weap_y"])
-		pw = float(mlw["weap_w"])
-		ph = float(mlw["weap_h"])
+	var weapons_frame := "hud_module_targeting"
 	var slot_rects: Array = [
 		Rect2(582.0, 918.0, 74.0, 78.0),
 		Rect2(726.0, 918.0, 74.0, 78.0),
 		Rect2(871.0, 918.0, 74.0, 78.0),
 		Rect2(1016.0, 918.0, 74.0, 78.0)
 	]
-	if use_gen_weapons:
-		slot_rects.clear()
-		var slot_pad_x: float = pw * 0.08
-		var slot_inner_w: float = (pw - slot_pad_x * 2.0) / 4.0
-		var icon_sz: float = minf(58.0, ph * 0.36)
-		for i in range(4):
-			var sx: float = px + slot_pad_x + float(i) * slot_inner_w + (slot_inner_w - icon_sz) * 0.5
-			var sy: float = py + ph * 0.22
-			slot_rects.append(Rect2(sx, sy, icon_sz, icon_sz))
-		draw_tex(weapons_frame, Rect2(px, py, pw, ph))
 	for i in range(4):
 		var r: Rect2 = slot_rects[i]
 		draw_rect(r, Color(0.015, 0.045, 0.065, 1.0), true)
@@ -13127,8 +12946,7 @@ func draw_module_panel() -> void:
 		else:
 			draw_tex("hud_slot_empty", Rect2(r.position.x + 1.0, r.position.y + 3.0, r.size.x - 2.0, r.size.y - 2.0), Color(0.8, 0.9, 1.0, 0.65))
 
-	if not use_gen_weapons:
-		draw_tex(weapons_frame, Rect2(px, py, pw, ph))
+	draw_tex(weapons_frame, Rect2(px, py, pw, ph))
 	if pages > 1:
 		button(px + 8.0, py + 8.0, 36.0, 28.0, "<", "shift_weapon_hud_page", [-1], 16, Color.html("#8ef7ff"))
 		button(px + pw - 44.0, py + 8.0, 36.0, 28.0, ">", "shift_weapon_hud_page", [1], 16, Color.html("#8ef7ff"))
@@ -13140,8 +12958,8 @@ func draw_module_panel() -> void:
 		var cx = r.position.x + r.size.x * 0.5
 		var hit_x = r.position.x - 18.0
 		var hit_w = r.size.x + 36.0
-		var label_y1: float = (py + ph * 0.70) if use_gen_weapons else (py + 126.0)
-		var label_y2: float = (py + ph * 0.86) if use_gen_weapons else (py + 148.0)
+		var label_y1: float = py + 126.0
+		var label_y2: float = py + 148.0
 		if i < page_insts.size():
 			var inst3: Dictionary = page_insts[i]
 			var name_fit := _fit_hud_text(_weapon_hud_card_name(inst3), text_max_w, 11, 9)
@@ -13256,23 +13074,14 @@ func draw_ability_panel() -> void:
 		_draw_mobile_compact_abilities()
 		return
 
-	if USE_PRODUCTION_UI and (images.has("active_systems_frame") or (is_mobile_ui and images.has("hud_gen_abilities"))):
+	if USE_PRODUCTION_UI and images.has("active_systems_frame"):
 		# Futuristic Steampunk Four-Slot Active Systems Panel (1983x793, 2.50:1 aspect)
-		# Mobile uses generated 4-slot abilities shell (2172×724).
-		var abilities_frame := _hud_frame_key("active_systems_frame", "hud_gen_abilities")
-		var use_gen_abilities := _mobile_gen_hud_active() and abilities_frame == "hud_gen_abilities"
+		var abilities_frame := "active_systems_frame"
 		var px: float = 1215.0
 		var py: float = 880.0
 		var ph: float = 187.0
 		var scale: float = ph / 793.0 # 0.235813 uniform scale preserving 2.50:1 aspect
 		var pw: float = 1983.0 * scale # 467.62 px
-		if use_gen_abilities:
-			var mla := _mobile_hud_layout()
-			px = float(mla["abil_x"])
-			py = float(mla["abil_y"])
-			pw = float(mla["abil_w"])
-			ph = float(mla["abil_h"])
-			scale = pw / 2172.0
 
 		var slot_info = [
 			{ "key": "boost", "tex": "active_icon_boost", "cx": px + 358.0 * scale, "cy": py + 330.0 * scale, "orange": false },
@@ -13280,20 +13089,12 @@ func draw_ability_panel() -> void:
 			{ "key": "repair", "tex": "active_icon_repair", "cx": px + 1204.0 * scale, "cy": py + 330.0 * scale, "orange": false },
 			{ "key": "barrage", "tex": "active_icon_barrage", "cx": px + 1624.5 * scale, "cy": py + 330.0 * scale, "orange": true }
 		]
-		if use_gen_abilities:
-			slot_info = [
-				{ "key": "boost", "tex": "active_icon_boost", "cx": px + pw * 0.155, "cy": py + ph * 0.42, "orange": false },
-				{ "key": "shield", "tex": "active_icon_shield", "cx": px + pw * 0.385, "cy": py + ph * 0.42, "orange": false },
-				{ "key": "repair", "tex": "active_icon_repair", "cx": px + pw * 0.615, "cy": py + ph * 0.42, "orange": false },
-				{ "key": "barrage", "tex": "active_icon_barrage", "cx": px + pw * 0.845, "cy": py + ph * 0.42, "orange": true }
-			]
-			draw_tex(abilities_frame, Rect2(px, py, pw, ph))
 
-		var win_w: float = (pw * 0.165) if use_gen_abilities else (312.0 * scale)
-		var win_h: float = (ph * 0.42) if use_gen_abilities else (309.0 * scale)
-		var icon_size: float = (ph * 0.34) if use_gen_abilities else (270.0 * scale)
+		var win_w: float = 312.0 * scale
+		var win_h: float = 309.0 * scale
+		var icon_size: float = 270.0 * scale
 
-		# --- LAYER 1: Dark CRT backplate & dynamic icon (BEHIND frame on desktop; ABOVE on mobile gen) ---
+		# --- LAYER 1: Dark CRT backplate & dynamic icon (behind frame) ---
 		for s in slot_info:
 			var key = s["key"]
 			var a = abilities[key]
@@ -13338,9 +13139,8 @@ func draw_ability_panel() -> void:
 				draw_rect(Rect2(cx - win_w * 0.5, cy - win_h * 0.5, win_w, win_h), Color(0.0, 0.0, 0.0, 0.68), true)
 				draw_text2(str(int(ceil(a["cooldown"]))), cx, cy + 9.0, 24, Color.WHITE, "center")
 
-		# --- LAYER 2: Transparent HUD Frame Foreground Overlay (desktop / non-gen only) ---
-		if not use_gen_abilities:
-			draw_tex(abilities_frame, Rect2(px, py, pw, ph))
+		# --- LAYER 2: Transparent HUD Frame Foreground Overlay ---
+		draw_tex(abilities_frame, Rect2(px, py, pw, ph))
 
 		# --- LAYER 3: Labels & Click Hitboxes (ON TOP) ---
 		var slot_w = pw / 4.0
@@ -13369,11 +13169,11 @@ func draw_ability_panel() -> void:
 				label_col = Color.html("#ffd06f") if s["orange"] else Color.WHITE
 
 			# Small dark label plate for clean typography contrast
-			var ly: float = (py + ph * 0.76) if use_gen_abilities else (py + 133.0)
-			var plate_w: float = 64.0 if use_gen_abilities else 60.0
+			var ly: float = py + 133.0
+			var plate_w: float = 60.0
 			draw_rect(Rect2(cx - plate_w * 0.5, ly, plate_w, 15.0), Color(0.015, 0.045, 0.065, 0.90), true)
 			draw_rect(Rect2(cx - plate_w * 0.5, ly, plate_w, 15.0), Color(0.2, 0.6, 0.7, 0.45) if not s["orange"] else Color(0.7, 0.45, 0.15, 0.45), false, 1.0)
-			draw_text2(a["label"], cx, ly + 11.0, 11 if use_gen_abilities else 11, label_col, "center")
+			draw_text2(a["label"], cx, ly + 11.0, 11, label_col, "center")
 			button(sx + 6.0, py + 8.0, slot_w - 12.0, ph - 16.0, "", "use_ability", [key], 1, Color(1, 1, 1, 0))
 	else:
 		var px = 1200.0
