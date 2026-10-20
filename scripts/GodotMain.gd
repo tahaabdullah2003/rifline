@@ -146,6 +146,8 @@ var option_reset_confirm = 0.0
 var save_flash = 0.0
 var paused = false
 var game_speed = 1.0
+## P1: last state seen by the combat-music watcher (see _process).
+var _music_prev_state: String = ""
 var USE_PRODUCTION_UI = true
 var t = 0.0
 var shake = 0.0
@@ -2076,6 +2078,16 @@ var test_capture_timer = 2.0
 var test_captured = false
 var test_capture_phase = 0
 func _process(delta: float) -> void:
+	# P1: music follows state edges. Combat gets its own bed (play_combat_music
+	# falls back to travel until the combat track exists). Catches the many
+	# direct `state = "combat"` assignments that bypass set_state().
+	if state != _music_prev_state:
+		if audio != null:
+			if state == "combat" and _music_prev_state != "combat":
+				audio.play_combat_music(1.2)
+			elif _music_prev_state == "combat" and ["route", "rewards", "station", "build", "moduleshop", "event", "levelup"].has(state):
+				audio.play_travel_music(1.2)
+		_music_prev_state = state
 	if OS.get_cmdline_args().has("--capture-mobile-status") or OS.get_cmdline_user_args().has("--capture-mobile-status"):
 		test_capture_timer -= delta
 		if test_capture_timer <= 0.0 and not test_captured:
@@ -5829,7 +5841,7 @@ func weighted_enemy(weights: Dictionary, budget_left: float) -> String:
 
 func reset_run() -> void:
 	if audio != null:
-		audio.play_travel_music(1.5)
+		audio.play_combat_music(1.5)
 	state = "combat"
 	paused = false
 	victory = false
@@ -7811,7 +7823,10 @@ func load_run() -> bool:
 	elif state == "combat" and (current_encounter.is_empty() or not current_encounter.has("id")):
 		configure_encounter("combat")
 	if audio != null:
-		audio.play_travel_music(1.5)
+		if state == "combat":
+			audio.play_combat_music(1.5)
+		else:
+			audio.play_travel_music(1.5)
 	return true
 func save_permanent() -> void:
 	var f = FileAccess.open(SAVE_PERMANENT, FileAccess.WRITE)
@@ -11404,7 +11419,9 @@ func set_state(s: String) -> void:
 	if audio != null:
 		if state == "title" or state == "workshop":
 			audio.play_menu_music(1.0)
-		elif ["combat", "route", "rewards", "station", "build", "moduleshop", "event", "levelup"].has(state):
+		elif state == "combat":
+			audio.play_combat_music(1.5)
+		elif ["route", "rewards", "station", "build", "moduleshop", "event", "levelup"].has(state):
 			audio.play_travel_music(1.5)
 func open_options(back = "title") -> void:
 	options_back_state = back
@@ -13484,7 +13501,9 @@ func back_from_options() -> void:
 	if audio != null:
 		if state == "title" or state == "workshop":
 			audio.play_menu_music(1.0)
-		elif ["combat", "route", "rewards", "station", "build", "moduleshop", "event", "levelup"].has(state):
+		elif state == "combat":
+			audio.play_combat_music(1.5)
+		elif ["route", "rewards", "station", "build", "moduleshop", "event", "levelup"].has(state):
 			audio.play_travel_music(1.5)
 
 func draw_help() -> void:
@@ -13525,7 +13544,9 @@ func back_from_help() -> void:
 	if audio != null:
 		if state == "title" or state == "workshop":
 			audio.play_menu_music(1.0)
-		elif ["combat", "route", "rewards", "station", "build", "moduleshop", "event", "levelup"].has(state):
+		elif state == "combat":
+			audio.play_combat_music(1.5)
+		elif ["route", "rewards", "station", "build", "moduleshop", "event", "levelup"].has(state):
 			audio.play_travel_music(1.5)
 
 func wrap_text(text: String, x: float, y: float, width: float, line_h: float, size = 20) -> void:

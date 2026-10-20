@@ -110,6 +110,21 @@ func load_music_tracks() -> void:
 		(travel_res as AudioStreamOggVorbis).loop = true
 	if travel_res != null:
 		music_tracks["travel"] = travel_res
+	# P1: combat bed — ships as assets/audio/music/riftline_combat.{ogg,wav}.
+	# Until that file exists in the repo, play_combat_music() falls back to travel.
+	var combat_res := _load_audio_stream(
+		"res://assets/audio/music/riftline_combat.ogg",
+		"res://assets/audio/music/riftline_combat.wav"
+	)
+	if combat_res is AudioStreamWAV:
+		var combat_wav := combat_res as AudioStreamWAV
+		combat_wav.loop_mode = AudioStreamWAV.LOOP_FORWARD
+		combat_wav.loop_begin = 0
+		combat_wav.loop_end = int(combat_wav.get_length() * combat_wav.mix_rate)
+	elif combat_res is AudioStreamOggVorbis:
+		(combat_res as AudioStreamOggVorbis).loop = true
+	if combat_res != null:
+		music_tracks["combat"] = combat_res
 
 func load_sfx_files() -> void:
 	var sfx_map = {
@@ -137,6 +152,16 @@ func play_travel_music(fade_duration: float = 1.5) -> void:
 	if current_track == "travel" and active_music_player != null and active_music_player.playing:
 		return
 	fade_to_track("travel", fade_duration)
+
+## P1: dedicated combat bed. Falls back to the travel loop while the combat
+## track asset is still missing, so behavior matches the old build either way.
+func play_combat_music(fade_duration: float = 1.5) -> void:
+	if not music_tracks.has("combat"):
+		play_travel_music(fade_duration)
+		return
+	if current_track == "combat" and active_music_player != null and active_music_player.playing:
+		return
+	fade_to_track("combat", fade_duration)
 
 func fade_to_track(track_name: String, duration: float = 1.5) -> void:
 	if not music_tracks.has(track_name):
