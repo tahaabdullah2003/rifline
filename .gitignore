@@ -1,0 +1,49 @@
+# Godot
+.godot/
+*.translation
+
+# Cursor / agent skill installs (not part of the game runtime)
+.agents/
+
+# Android Gradle template + caches (reinstall via Project → Install Android Build Template)
+android/build/
+android/.gradle/
+**/local.properties
+
+# Built binaries / store outputs (regenerate with export_*.bat)
+build/
+
+# Local secrets — never commit keystore passwords or live export presets
+export_presets.cfg
+export_presets.local.cfg
+*.keystore
+*.jks
+
+# Captures / QA / scratch
+dev_captures/
+*_qa/
+**/*_qa/
+**/final_raw_backup/
+
+# Animation intermediate work / source dumps (runtime uses *_sheet.png)
+assets/animations/**/*_work/
+assets/animations/**/*_src/
+assets/animations/videos/
+
+# OS / editor
+.DS_Store
+Thumbs.db
+*.swp
+.vscode/*
+!.vscode/extensions.json
+
+# Python
+__pycache__/
+*.pyc
+.venv/
+
+# Misc scratch
+*.tmp
+*.bak
+*~
+skills-lock.json

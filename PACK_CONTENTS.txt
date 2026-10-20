@@ -1,0 +1,13 @@
+Riftline agent diagnostic pack
+- scripts/ (all .gd)
+- scenes/
+- project.godot, README, export_presets.cfg.example
+- assets/ui/hud/*.png (downscaled max 1024)
+- assets/ui/fonts/
+- assets/icon_*.png
+- captures/mobile_preview_before.jpg
+- AGENT_HANDOFF.md  <-- start here
+
+Excluded (too large / not needed to diagnose P0):
+animations, audio, mobile_bg, final, final_clean, region*, bosses,
+ui/final, ui/mobile full set, HUD SVGs, .godot

@@ -1,0 +1,52 @@
+; Engine configuration file.
+; It's best edited using the editor UI and not directly,
+; since the parameters that go here are not all obvious.
+;
+; Format:
+;   [section] ; section goes between []
+;   param=value ; assign values to parameters
+
+config_version=5
+
+[android]
+
+modules=""
+
+[animation]
+
+compatibility/default_parent_skeleton_in_mesh_instance_3d=true
+
+[application]
+
+config/name="RIFTLINE: LAST TRAIN"
+config/description="A train-defense roguelite expedition through the Rustlands. Godot 4 port of the complete browser MVP."
+config/version="1.0.8"
+run/main_scene="res://scenes/Main.tscn"
+config/features=PackedStringArray("4.7")
+config/icon="res://assets/icon_rift.png"
+
+[display]
+
+window/size/viewport_width=1920
+window/size/viewport_height=1080
+window/size/initial_position_type=2
+window/size/window_width_override=1230
+window/size/window_height_override=540
+window/stretch/mode="canvas_items"
+window/stretch/aspect="expand"
+window/handheld/orientation=4
+
+[editor]
+
+run/main_run_args="--resolution 1230x540 --mobile-ui"
+
+[rendering]
+
+textures/canvas_textures/default_texture_filter=0
+renderer/rendering_method="gl_compatibility"
+renderer/rendering_method.mobile="gl_compatibility"
+textures/vram_compression/import_etc2_astc=true
+
+[riftline]
+
+mobile_preview=true
