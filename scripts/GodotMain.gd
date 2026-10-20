@@ -613,6 +613,19 @@ func sfx(sound_name: String) -> void:
 		return
 	audio.play(sound_name)
 
+## P0: the HAPTICS option now actually vibrates the phone (Android/iOS; no-op on desktop).
+## Throttled so multi-hit barrages don't spam the vibration motor; force bypasses the throttle.
+var _last_haptic_ms: int = -100000
+
+func _haptic(duration_ms: int = 28, amplitude: float = 0.7, cooldown_ms: int = 160, force: bool = false) -> void:
+	if not bool(settings.get("haptics", true)):
+		return
+	var now_ms := Time.get_ticks_msec()
+	if not force and now_ms - _last_haptic_ms < cooldown_ms:
+		return
+	_last_haptic_ms = now_ms
+	Input.vibrate_handheld(duration_ms, amplitude)
+
 func load_assets() -> void:
 	var paths = {
 		"sky": "res://assets/v2/bg_sky.png",
@@ -7109,6 +7122,7 @@ func damage_car(idx: int, amount: float, source) -> void:
 	run_damage_taken += final
 	train_damage_flash = .14
 	shake = max(shake, 3.0)
+	_haptic(28, 0.7)
 	if settings["damage_numbers"]:
 		damage_numbers.append({ "x": car_draw_center_x(car), "y": 570.0, "text": "-" + str(int(final)), "life": .65, "color": Color.html("#ff7a66") })
 	if car["hp"] <= 0:
@@ -7118,6 +7132,7 @@ func damage_car(idx: int, amount: float, source) -> void:
 			car["wreck_t"] = 0.0
 			toast(str(car["label"]).to_upper() + " DISABLED!")
 			sfx("warn")
+			_haptic(90, 1.0, 160, true)
 			shake = max(shake, 11.0)
 			_nudge_combat_camera_for_convoy_change()
 			# Cargo broken: train will pack left; boss stays on left rail and presses harder.
@@ -8912,6 +8927,7 @@ func use_ability(name: String) -> void:
 		toast(a["label"] + " cooling down")
 		return
 	_ability_tap_lock[name] = 0.35
+	_haptic(45, 0.9, 0, true)
 	match name:
 		"boost":
 			a["duration"] = 5.0
